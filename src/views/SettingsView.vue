@@ -47,11 +47,24 @@ const themeOptions = [
 const showImportModal = ref(false);
 const importJson = ref("");
 const showResetConfirm = ref(false);
+const bgSettingsExpanded = ref(false);
+const bgPreviewLoaded = ref(false);
+const bgPreviewLoading = ref(false);
 
 const backgroundPreviewUrl = computed(() => {
   if (!settings.value?.background_image) return "";
+  if (!bgSettingsExpanded.value) return "";
   return convertFileSrc(settings.value.background_image);
 });
+
+function getFileExtension(path: string): string {
+  return path.split('.').pop()?.toLowerCase() || '';
+}
+
+function isAnimatedImage(path: string): boolean {
+  const ext = getFileExtension(path);
+  return ext === 'gif' || ext === 'webp' || ext === 'apng';
+}
 
 onMounted(async () => {
   await loadSettings();
@@ -60,6 +73,13 @@ onMounted(async () => {
     acrylicSupported.value = await checkAcrylicSupport();
   } catch {
     acrylicSupported.value = false;
+  }
+});
+
+watch(bgSettingsExpanded, (expanded) => {
+  if (expanded && settings.value?.background_image) {
+    bgPreviewLoaded.value = false;
+    bgPreviewLoading.value = true;
   }
 });
 
@@ -440,97 +460,126 @@ function clearBackgroundImage() {
             />
           </div>
 
-          <div class="setting-row full-width">
-            <div class="setting-info">
-              <span class="setting-label">背景图片</span>
-              <span class="setting-desc">上传一张图片作为软件背景，支持 PNG、JPG、WEBP 等格式</span>
+          <!-- 背景图片折叠区域 -->
+          <div class="collapsible-section">
+            <div class="collapsible-header" @click="bgSettingsExpanded = !bgSettingsExpanded">
+              <div class="setting-info">
+                <span class="setting-label">背景图片</span>
+                <span class="setting-desc">上传一张图片作为软件背景，支持 PNG、JPG、WEBP 等格式</span>
+              </div>
+              <div class="collapsible-toggle" :class="{ expanded: bgSettingsExpanded }">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </div>
             </div>
-            <div class="bg-image-picker">
-              <div v-if="settings.background_image" class="bg-preview">
-                <img :src="backgroundPreviewUrl" alt="Background preview" />
-                <div class="bg-preview-overlay">
-                  <span class="bg-preview-path">{{ settings.background_image.split('\\').pop() }}</span>
-                  <SLButton variant="danger" size="sm" @click="clearBackgroundImage">移除</SLButton>
+            <Transition name="collapse">
+              <div v-show="bgSettingsExpanded" class="collapsible-content">
+                <div class="setting-row full-width">
+                  <div class="bg-image-picker">
+                    <div v-if="settings.background_image" class="bg-preview">
+                      <div v-if="bgPreviewLoading && !bgPreviewLoaded" class="bg-preview-loading">
+                        <div class="loading-spinner"></div>
+                        <span>加载预览中...</span>
+                      </div>
+                      <img
+                        v-show="bgPreviewLoaded || !bgPreviewLoading"
+                        :src="backgroundPreviewUrl"
+                        alt="Background preview"
+                        @load="bgPreviewLoaded = true; bgPreviewLoading = false"
+                        @loadstart="bgPreviewLoading = true"
+                        @error="bgPreviewLoading = false"
+                        loading="lazy"
+                      />
+                      <div v-if="isAnimatedImage(settings.background_image)" class="bg-animated-badge">
+                        动图
+                      </div>
+                      <div class="bg-preview-overlay">
+                        <span class="bg-preview-path">{{ settings.background_image.split('\\').pop() }}</span>
+                        <SLButton variant="danger" size="sm" @click="clearBackgroundImage">移除</SLButton>
+                      </div>
+                    </div>
+                    <SLButton v-else variant="secondary" @click="pickBackgroundImage">
+                      选择图片
+                    </SLButton>
+                    <SLButton v-if="settings.background_image" variant="secondary" size="sm" @click="pickBackgroundImage">
+                      更换图片
+                    </SLButton>
+                  </div>
+                </div>
+
+                <div class="setting-row">
+                  <div class="setting-info">
+                    <span class="setting-label">不透明度</span>
+                    <span class="setting-desc">调节背景图片的不透明度 (0.0 - 1.0)，数值越小越透明</span>
+                  </div>
+                  <div class="slider-control">
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.05"
+                      v-model="bgOpacity"
+                      @input="markChanged"
+                      class="sl-slider"
+                    />
+                    <span class="slider-value">{{ bgOpacity }}</span>
+                  </div>
+                </div>
+
+                <div class="setting-row">
+                  <div class="setting-info">
+                    <span class="setting-label">模糊程度 (px)</span>
+                    <span class="setting-desc">为背景添加模糊效果，让前景内容更清晰</span>
+                  </div>
+                  <div class="slider-control">
+                    <input
+                      type="range"
+                      min="0"
+                      max="20"
+                      step="1"
+                      v-model="bgBlur"
+                      @input="markChanged"
+                      class="sl-slider"
+                    />
+                    <span class="slider-value">{{ bgBlur }}px</span>
+                  </div>
+                </div>
+
+                <div class="setting-row">
+                  <div class="setting-info">
+                    <span class="setting-label">亮度</span>
+                    <span class="setting-desc">调节背景图片的亮度 (0.0 - 2.0)，1.0 为原始亮度</span>
+                  </div>
+                  <div class="slider-control">
+                    <input
+                      type="range"
+                      min="0"
+                      max="2"
+                      step="0.1"
+                      v-model="bgBrightness"
+                      @input="markChanged"
+                      class="sl-slider"
+                    />
+                    <span class="slider-value">{{ bgBrightness }}</span>
+                  </div>
+                </div>
+
+                <div class="setting-row">
+                  <div class="setting-info">
+                    <span class="setting-label">图片填充方式</span>
+                    <span class="setting-desc">选择背景图片的显示方式</span>
+                  </div>
+                  <div class="input-lg">
+                    <SLSelect
+                      v-model="settings.background_size"
+                      :options="backgroundSizeOptions"
+                      @update:modelValue="markChanged"
+                    />
+                  </div>
                 </div>
               </div>
-              <SLButton v-else variant="secondary" @click="pickBackgroundImage">
-                选择图片
-              </SLButton>
-              <SLButton v-if="settings.background_image" variant="secondary" size="sm" @click="pickBackgroundImage">
-                更换图片
-              </SLButton>
-            </div>
-          </div>
-
-          <div class="setting-row">
-            <div class="setting-info">
-              <span class="setting-label">不透明度</span>
-              <span class="setting-desc">调节背景图片的不透明度 (0.0 - 1.0)，数值越小越透明</span>
-            </div>
-            <div class="slider-control">
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.05"
-                v-model="bgOpacity"
-                @input="markChanged"
-                class="sl-slider"
-              />
-              <span class="slider-value">{{ bgOpacity }}</span>
-            </div>
-          </div>
-
-          <div class="setting-row">
-            <div class="setting-info">
-              <span class="setting-label">模糊程度 (px)</span>
-              <span class="setting-desc">为背景添加模糊效果，让前景内容更清晰</span>
-            </div>
-            <div class="slider-control">
-              <input
-                type="range"
-                min="0"
-                max="20"
-                step="1"
-                v-model="bgBlur"
-                @input="markChanged"
-                class="sl-slider"
-              />
-              <span class="slider-value">{{ bgBlur }}px</span>
-            </div>
-          </div>
-
-          <div class="setting-row">
-            <div class="setting-info">
-              <span class="setting-label">亮度</span>
-              <span class="setting-desc">调节背景图片的亮度 (0.0 - 2.0)，1.0 为原始亮度</span>
-            </div>
-            <div class="slider-control">
-              <input
-                type="range"
-                min="0"
-                max="2"
-                step="0.1"
-                v-model="bgBrightness"
-                @input="markChanged"
-                class="sl-slider"
-              />
-              <span class="slider-value">{{ bgBrightness }}</span>
-            </div>
-          </div>
-
-          <div class="setting-row">
-            <div class="setting-info">
-              <span class="setting-label">图片填充方式</span>
-              <span class="setting-desc">选择背景图片的显示方式</span>
-            </div>
-            <div class="input-lg">
-              <SLSelect
-                v-model="settings.background_size"
-                :options="backgroundSizeOptions"
-                @update:modelValue="markChanged"
-              />
-            </div>
+            </Transition>
           </div>
         </div>
       </SLCard>
@@ -576,7 +625,7 @@ function clearBackgroundImage() {
 <style scoped>
 .settings-view {
   display: flex; flex-direction: column; gap: var(--sl-space-lg);
-  max-width: 860px; padding-bottom: var(--sl-space-2xl);
+  max-width: 860px; margin: 0 auto; padding-bottom: var(--sl-space-2xl);
 }
 
 .msg-banner {
@@ -658,6 +707,47 @@ function clearBackgroundImage() {
   object-fit: cover;
 }
 
+.bg-preview-loading {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sl-space-sm);
+  background: var(--sl-surface);
+  color: var(--sl-text-secondary);
+  font-size: 0.875rem;
+}
+
+.loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--sl-border);
+  border-top-color: var(--sl-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.bg-animated-badge {
+  position: absolute;
+  top: var(--sl-space-sm);
+  right: var(--sl-space-sm);
+  padding: 2px 8px;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: var(--sl-radius-sm);
+}
+
 .bg-preview-overlay {
   position: absolute;
   bottom: 0;
@@ -733,5 +823,72 @@ function clearBackgroundImage() {
   color: var(--sl-text-primary);
   min-width: 50px;
   text-align: right;
+}
+
+.collapsible-section {
+  border: 1px solid var(--sl-border-light);
+  border-radius: var(--sl-radius-md);
+  overflow: hidden;
+  margin: var(--sl-space-sm) 0;
+}
+
+.collapsible-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sl-space-md);
+  cursor: pointer;
+  background: var(--sl-surface);
+  transition: background-color var(--sl-transition-fast);
+}
+
+.collapsible-header:hover {
+  background: var(--sl-surface-hover);
+}
+
+.collapsible-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--sl-radius-sm);
+  color: var(--sl-text-secondary);
+  transition: all var(--sl-transition-normal);
+  flex-shrink: 0;
+}
+
+.collapsible-toggle:hover {
+  background: var(--sl-border-light);
+  color: var(--sl-text-primary);
+}
+
+.collapsible-toggle.expanded {
+  transform: rotate(180deg);
+}
+
+.collapsible-content {
+  padding: 0 var(--sl-space-md) var(--sl-space-md);
+  background: var(--sl-surface);
+}
+
+.collapse-enter-active,
+.collapse-leave-active {
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.collapse-enter-from,
+.collapse-leave-to {
+  opacity: 0;
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.collapse-enter-to,
+.collapse-leave-from {
+  opacity: 1;
+  max-height: 800px;
 }
 </style>

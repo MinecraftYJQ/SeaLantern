@@ -43,6 +43,11 @@ export const contributors: Contributor[] = [
     avatar: "https://mc-heads.net/avatar/Alex/64",
     //url: "https://gitee.com/fps_z",
   },
+  {
+    name: "Little_100",
+    role: "打杂",
+    avatar: "https://minotar.net/avatar/Little100/64",
+  },
   
   // ============================================
   // 在这里添加更多贡献者！

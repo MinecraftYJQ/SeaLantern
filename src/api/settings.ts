@@ -45,5 +45,5 @@ export async function checkAcrylicSupport(): Promise<boolean> {
 }
 
 export async function applyAcrylic(enabled: boolean, darkMode: boolean): Promise<void> {
-  return tauriInvoke<void>('apply_acrylic', { enabled, dark_mode: darkMode });
+  return tauriInvoke<void>('apply_acrylic', { enabled, darkMode });
 }
