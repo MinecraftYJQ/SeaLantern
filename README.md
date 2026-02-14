@@ -37,6 +37,23 @@ npm run tauri build
 
 产物在 `src-tauri/target/release/bundle/` 里。
 
+### 代码质量检查
+
+提交代码前，建议运行以下命令检查代码质量：
+
+```bash
+# 检查代码格式
+cargo fmt --all -- --check
+
+# 运行 Clippy 检查
+cargo clippy --workspace -- -D warnings
+
+# 自动格式化代码
+cargo fmt --all
+```
+
+项目已配置 CI 自动检查，确保所有提交的代码都符合规范。
+
 
 ## 技术栈
 
