@@ -130,8 +130,6 @@ watch(bgSettingsExpanded, (expanded) => {
   }
 });
 
-
-
 async function loadSettings() {
   loading.value = true;
   error.value = null;
@@ -366,8 +364,6 @@ function rgbaFromHex(hex: string, alpha: number): string {
   return `rgba(${R}, ${G}, ${B}, ${alpha})`;
 }
 
-
-
 async function handleThemeChange() {
   markChanged();
   if (!settings.value) return;
@@ -531,10 +527,34 @@ function clearBackgroundImage() {
 
     <template v-else-if="settings">
       <SLCard>
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sl-space-sm);">
+        <div
+          style="
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--sl-space-sm);
+          "
+        >
           <div>
-            <h3 style="margin: 0; font-size: 1.125rem; font-weight: 600; color: var(--sl-text-primary);">{{ i18n.t('settings.color_theme') }}</h3>
-            <p style="margin: var(--sl-space-xs) 0 0 0; font-size: 0.875rem; color: var(--sl-text-secondary);">{{ i18n.t('settings.color_theme_desc') }}</p>
+            <h3
+              style="
+                margin: 0;
+                font-size: 1.125rem;
+                font-weight: 600;
+                color: var(--sl-text-primary);
+              "
+            >
+              {{ i18n.t("settings.color_theme") }}
+            </h3>
+            <p
+              style="
+                margin: var(--sl-space-xs) 0 0 0;
+                font-size: 0.875rem;
+                color: var(--sl-text-secondary);
+              "
+            >
+              {{ i18n.t("settings.color_theme_desc") }}
+            </p>
           </div>
           <div class="input-lg">
             <SLSelect
